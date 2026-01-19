@@ -1,9 +1,5 @@
 <template>
-  <el-button
-    type="primary"
-    v-permission="'ROLE:CREATE'"
-    @click="openCreate"
-  >
+  <el-button type="primary" v-permission="'ROLE:CREATE'" @click="openCreate">
     新建角色
   </el-button>
 
@@ -21,30 +17,29 @@
 
     <el-table-column label="操作">
       <template #default="{ row }">
-        <el-button
-          size="small"
-          v-permission="'ROLE:EDIT'"
-          @click="edit(row)"
-        >
+
+        <el-button size="small" type="info" @click="openRoleDetail(row)">
+          查看详情
+        </el-button>
+
+
+        <el-button size="small" v-permission="'ROLE:UPDATE'" @click="edit(row)">
           编辑
         </el-button>
-        <el-button
-          size="small"
-          v-permission="'ROLE:STATUS'"
-          @click="toggle(row)"
-        >
+
+        <el-button size="small" v-permission="'ROLE:STATUS'" @click="toggle(row)">
           {{ row.status === 1 ? '禁用' : '启用' }}
         </el-button>
+
+        <el-button size="small" v-permission="'ROLE:ASSIGN'" @click="openPermissionDialog(row)">
+          分配权限
+        </el-button>
+
       </template>
     </el-table-column>
   </el-table>
 
-  <el-pagination
-    style="margin-top: 12px"
-    :total="total"
-    :page-size="query.pageSize"
-    @current-change="load"
-  />
+  <el-pagination style="margin-top: 12px" :total="total" :page-size="query.pageSize" @current-change="load" />
 
   <!-- 新建 / 编辑弹窗 -->
   <el-dialog v-model="visible" title="角色">
@@ -65,6 +60,51 @@
       <el-button type="primary" @click="submit">确定</el-button>
     </template>
   </el-dialog>
+
+  <!-- 分配权限弹窗 -->
+  <el-dialog v-model="permissionVisible" title="分配权限" width="600px">
+    <el-checkbox-group v-model="checkedPermissionIds">
+      <el-checkbox v-for="p in permissionList" :key="p.permissionId" :label="p.permissionId"
+        style="width: 45%; margin-bottom: 8px">
+        {{ p.permissionDisplayName }}（{{ p.permissionName }}）
+      </el-checkbox>
+    </el-checkbox-group>
+
+    <template #footer>
+      <el-button @click="permissionVisible = false">取消</el-button>
+      <el-button type="primary" @click="submitPermissions">
+        保存
+      </el-button>
+    </template>
+  </el-dialog>
+
+  <!-- 角色详情抽屉 -->
+  <el-drawer v-model="detailVisible" title="角色详情" size="40%">
+    <el-descriptions :column="1" border>
+      <el-descriptions-item label="角色标识">
+        {{ detail.roleName }}
+      </el-descriptions-item>
+      <el-descriptions-item label="角色名称">
+        {{ detail.roleDisplayName }}
+      </el-descriptions-item>
+      <el-descriptions-item label="描述">
+        {{ detail.description || '-' }}
+      </el-descriptions-item>
+      <el-descriptions-item label="状态">
+        <el-tag :type="detail.status === 1 ? 'success' : 'danger'">
+          {{ detail.status === 1 ? '启用' : '禁用' }}
+        </el-tag>
+      </el-descriptions-item>
+    </el-descriptions>
+
+    <el-divider />
+
+    <h4>拥有的权限</h4>
+    <el-tag v-for="p in rolePermissions" :key="p.permissionId" type="success" style="margin: 4px">
+      {{ p.permissionName }}
+    </el-tag>
+  </el-drawer>
+
 </template>
 
 <script setup lang="ts">
@@ -121,6 +161,62 @@ const toggle = async (row: any) => {
     status: row.status === 1 ? 0 : 1,
   })
   load()
+}
+
+/* 分配权限 */
+const permissionVisible = ref(false)
+const currentRoleId = ref<number | null>(null)
+const permissionList = ref<any[]>([])
+const checkedPermissionIds = ref<number[]>([])
+
+/* 打开分配权限弹窗 */
+const openPermissionDialog = async (row: any) => {
+  currentRoleId.value = row.roleId
+  permissionVisible.value = true
+
+  // 1. 查询角色已有权限
+  const rolePermissions = await request.get(
+    `/roles/${row.roleId}/permissions`
+  )
+  checkedPermissionIds.value = rolePermissions.map(
+    (p: any) => p.permissionId
+  )
+
+  // 2. 查询所有权限（分页接口复用）
+  const allPermissions = await request.get('/permissions/page', {
+    params: { pageNum: 1, pageSize: 1000 },
+  })
+  permissionList.value = allPermissions.records
+}
+
+/* 提交权限分配 */
+const submitPermissions = async () => {
+  if (!currentRoleId.value) return
+
+  await request.post(
+    `/roles/${currentRoleId.value}/permissions`,
+    {
+      ids: checkedPermissionIds.value,
+    }
+  )
+
+  permissionVisible.value = false
+}
+
+/* 角色详情 */
+const detailVisible = ref(false)
+const detail = ref<any>({})
+const rolePermissions = ref<any[]>([])
+
+/* 打开角色详情 Drawer */
+const openRoleDetail = async (row: any) => {
+  detailVisible.value = true
+  detail.value = row
+
+  // 查询角色拥有的权限
+  rolePermissions.value = await request.get(
+    `/roles/${row.roleId}/permissions`
+  )
 }
 
 load()

@@ -26,7 +26,7 @@
       <template #default="{ row }">
         <el-button
           size="small"
-          v-permission="'PERMISSION:EDIT'"
+          v-permission="'PERMISSION:UPDATE'"
           @click="edit(row)"
         >
           编辑

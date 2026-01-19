@@ -2,23 +2,13 @@
   <!-- 查询区 -->
   <el-form inline>
     <el-form-item>
-      <el-input
-        v-model="query.username"
-        placeholder="用户名"
-        clearable
-        @keyup.enter="load(1)"
-      />
+      <el-input v-model="query.username" placeholder="用户名" clearable @keyup.enter="load(1)" />
     </el-form-item>
     <el-button type="primary" @click="load(1)">查询</el-button>
   </el-form>
 
   <!-- 操作区 -->
-  <el-button
-    type="primary"
-    style="margin: 10px 0"
-    v-permission="'USER:CREATE'"
-    @click="openCreate"
-  >
+  <el-button type="primary" style="margin: 10px 0" v-permission="'USER:CREATE'" @click="openCreate">
     新建用户
   </el-button>
 
@@ -39,52 +29,34 @@
 
     <el-table-column label="操作" width="420">
       <template #default="{ row }">
-        <el-button
-          size="small"
-          v-permission="'USER:EDIT'"
-          @click="edit(row)"
-        >
+
+        <el-button size="small" type="info" @click="openDetail(row)">
+          查看详情
+        </el-button>
+
+        <el-button size="small" v-permission="'USER:UPDATE'" @click="edit(row)">
           编辑
         </el-button>
 
-        <el-button
-          size="small"
-          v-permission="'USER:ROLE:ASSIGN'"
-          @click="openRoleDialog(row)"
-        >
-          分配角色
-        </el-button>
-
-        <el-button
-          size="small"
-          type="warning"
-          v-permission="'USER:PASSWORD:RESET'"
-          @click="resetPassword(row)"
-        >
+        <el-button size="small" type="warning" v-permission="'USER:PASSWORD:RESET'" @click="resetPassword(row)">
           重置密码
         </el-button>
 
-        <el-button
-          size="small"
-          type="danger"
-          v-permission="'USER:STATUS'"
-          @click="toggleStatus(row)"
-        >
+        <el-button size="small" type="danger" v-permission="'USER:STATUS'" @click="toggleStatus(row)">
           {{ row.status === 1 ? '禁用' : '启用' }}
         </el-button>
+
+        <el-button size="small" v-permission="'USER:ASSIGN'" @click="openRoleDialog(row)">
+          分配角色
+        </el-button>
+
       </template>
     </el-table-column>
   </el-table>
 
   <!-- 分页 -->
-  <el-pagination
-    style="margin-top: 12px"
-    background
-    layout="prev, pager, next"
-    :total="total"
-    :page-size="query.pageSize"
-    @current-change="load"
-  />
+  <el-pagination style="margin-top: 12px" background layout="prev, pager, next" :total="total"
+    :page-size="query.pageSize" @current-change="load" />
 
   <!-- 新建 / 编辑弹窗 -->
   <el-dialog v-model="visible" title="用户">
@@ -109,11 +81,7 @@
   <!-- 分配角色弹窗 -->
   <el-dialog v-model="roleVisible" title="分配角色">
     <el-checkbox-group v-model="checkedRoleIds">
-      <el-checkbox
-        v-for="r in roleList"
-        :key="r.roleId"
-        :label="r.roleId"
-      >
+      <el-checkbox v-for="r in roleList" :key="r.roleId" :label="r.roleId">
         {{ r.roleDisplayName }}
       </el-checkbox>
     </el-checkbox-group>
@@ -123,6 +91,43 @@
       <el-button type="primary" @click="submitRoles">保存</el-button>
     </template>
   </el-dialog>
+
+  <!-- 用户详情抽屉 -->
+  <el-drawer v-model="detailVisible" title="用户详情" size="40%">
+    <el-descriptions :column="1" border>
+      <el-descriptions-item label="用户名">
+        {{ detail.username }}
+      </el-descriptions-item>
+      <el-descriptions-item label="昵称">
+        {{ detail.nickname || '-' }}
+      </el-descriptions-item>
+      <el-descriptions-item label="邮箱">
+        {{ detail.email || '-' }}
+      </el-descriptions-item>
+      <el-descriptions-item label="状态">
+        <el-tag :type="detail.status === 1 ? 'success' : 'danger'">
+          {{ detail.status === 1 ? '启用' : '禁用' }}
+        </el-tag>
+      </el-descriptions-item>
+    </el-descriptions>
+
+    <el-divider />
+
+    <!-- 角色 -->
+    <h4>角色</h4>
+    <el-tag v-for="r in roles" :key="r.roleId" style="margin-right: 6px">
+      {{ r.roleDisplayName }}
+    </el-tag>
+
+    <el-divider />
+
+    <!-- 权限 -->
+    <h4>权限</h4>
+    <el-tag v-for="p in permissions" :key="p.permissionId" type="success" style="margin: 4px">
+      {{ p.permissionName }}
+    </el-tag>
+  </el-drawer>
+
 </template>
 
 <script setup lang="ts">
@@ -235,6 +240,26 @@ const submitRoles = async () => {
   })
   roleVisible.value = false
   ElMessage.success('角色分配成功')
+}
+
+/* 用户详情 */
+const detailVisible = ref(false)
+const detail = ref<any>({})
+const roles = ref<any[]>([])
+const permissions = ref<any[]>([])
+
+/* 打开详情抽屉 */
+const openDetail = async (row: any) => {
+  detailVisible.value = true
+  detail.value = row
+
+  // 查询角色
+  roles.value = await request.get(`/users/${row.userId}/roles`)
+
+  // 查询权限
+  permissions.value = await request.get(
+    `/users/${row.userId}/permissions`
+  )
 }
 
 load()
