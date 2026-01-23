@@ -15,13 +15,12 @@
       </template>
     </el-table-column>
 
-    <el-table-column label="操作">
+    <el-table-column label="操作" width="420">
       <template #default="{ row }">
 
         <el-button size="small" type="info" @click="openRoleDetail(row)">
           查看详情
         </el-button>
-
 
         <el-button size="small" v-permission="'ROLE:UPDATE'" @click="edit(row)">
           编辑
@@ -110,6 +109,10 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import request from '@/utils/request'
+import type { Role } from '@/types/role'
+import { ElMessage } from 'element-plus'
+import type { PageResult } from '@/types/page'
+import type { Permission } from '@/types/permission'
 
 const list = ref<any[]>([])
 const total = ref(0)
@@ -121,36 +124,61 @@ const query = ref({
   pageSize: 10,
 })
 
+// 定义一个统一表单
 const form = ref({
   roleName: '',
   roleDisplayName: '',
   description: '',
+  version: 0,
+  secretToken: '',
 })
 
 const load = async (page = 1) => {
   query.value.pageNum = page
-  const data = await request.get('/roles/page', { params: query.value })
+  const data = await request.get('/roles/page', { params: query.value }) as PageResult<Role>
   list.value = data.records
   total.value = data.total
 }
 
 const openCreate = () => {
   editingId.value = null
-  form.value = { roleName: '', roleDisplayName: '', description: '' }
+  // 新建时重置
+  form.value = {
+    roleName: '',
+    roleDisplayName: '',
+    description: '',
+    version: 0,
+    secretToken: '',
+  }
   visible.value = true
 }
 
-const edit = (row: any) => {
+const edit = async (row: any) => {
   editingId.value = row.roleId
-  form.value = { ...row }
+
+  const data = await request.get(`/roles/${row.roleId}`) as Role
+  // 编辑时赋值
+  form.value = {
+    roleName: data.roleName,
+    roleDisplayName: data.roleDisplayName,
+    description: data.description,
+    version: data.version,
+    secretToken: data.secretToken,
+  }
+
   visible.value = true
 }
 
 const submit = async () => {
   if (editingId.value) {
+    // 修改：全量提交
     await request.put(`/roles/${editingId.value}`, form.value)
+    ElMessage.success('修改成功')
   } else {
+    // 创建：只取需要的字段
+    const { roleName, roleDisplayName, description } = form.value // 解构
     await request.post('/roles', form.value)
+    ElMessage.success('创建成功')
   }
   visible.value = false
   load()
@@ -174,18 +202,14 @@ const openPermissionDialog = async (row: any) => {
   currentRoleId.value = row.roleId
   permissionVisible.value = true
 
-  // 1. 查询角色已有权限
-  const rolePermissions = await request.get(
-    `/roles/${row.roleId}/permissions`
-  )
-  checkedPermissionIds.value = rolePermissions.map(
-    (p: any) => p.permissionId
-  )
+  // 查询角色已有权限
+  const rolePermissions = await request.get(`/roles/${row.roleId}/permissions`) as Permission[]
+  checkedPermissionIds.value = rolePermissions.map((p: any) => p.permissionId)
 
-  // 2. 查询所有权限（分页接口复用）
+  // 查询所有权限（分页接口复用）
   const allPermissions = await request.get('/permissions/page', {
     params: { pageNum: 1, pageSize: 1000 },
-  })
+  }) as PageResult<Permission>
   permissionList.value = allPermissions.records
 }
 

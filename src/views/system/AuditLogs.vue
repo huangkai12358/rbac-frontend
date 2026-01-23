@@ -94,13 +94,15 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import request from '@/utils/request'
+import type { AuditLog, AuditLogQuery } from '@/types/audit'
+import type { PageResult } from '@/types/page'
 
 /* 表格数据 */
 const list = ref<any[]>([])
 const total = ref(0)
 
 /* 查询条件 */
-const query = ref({
+const query = ref<AuditLogQuery>({
   pageNum: 1,
   pageSize: 20,
   username: '',
@@ -111,7 +113,7 @@ const query = ref({
 })
 
 /* 时间区间 */
-const dateRange = ref<string[] | null>(null)
+const dateRange = ref<[string, string] | null>(null) // 明确告诉 TS：dateRange 要么 null，要么一定有两个 string。dateRange.value[0] 不再可能是 undefined
 
 /* 加载数据 */
 const load = async (page = 1) => {
@@ -127,7 +129,7 @@ const load = async (page = 1) => {
 
   const data = await request.get('/audit-logs/page', {
     params: query.value,
-  })
+  }) as PageResult<AuditLog>
 
   list.value = data.records
   total.value = data.total

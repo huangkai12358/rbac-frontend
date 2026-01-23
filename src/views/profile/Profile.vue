@@ -1,9 +1,4 @@
 <template>
-  <el-card>
-    <template #header>
-      <span>个人中心</span>
-    </template>
-
     <!-- 基本信息 -->
     <el-descriptions title="基本信息" :column="2" border>
       <el-descriptions-item label="用户名">
@@ -94,7 +89,6 @@
         </el-button>
       </el-form-item>
     </el-form>
-  </el-card>
 </template>
 
 <script setup lang="ts">

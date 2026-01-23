@@ -1,18 +1,19 @@
 import { defineStore } from 'pinia'
 import request from '@/utils/request'
+import type { Me } from '@/types/me'
 
 export const useUserStore = defineStore('user', {
   state: () => ({
     userId: 0,
     username: '',
     nickname: '',
-    roles: [] as any[],
+    roles: [] as string[],
     permissions: [] as string[],
   }),
 
   actions: {
     async fetchMe() {
-      const data = await request.get('/me')
+      const data = await request.get('/me') as Me
       this.userId = data.userId
       this.username = data.username
       this.nickname = data.nickname
@@ -22,7 +23,7 @@ export const useUserStore = defineStore('user', {
 
     logout() {
       localStorage.clear()
-      location.href = '/login'
+      location.href = '/login' // 不同于 router.push('/login') 前端单页跳转，是 浏览器级整页跳转（刷新），会清空 JS 内存 和 Pinia 状态
     },
   },
 })

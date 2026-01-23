@@ -1,6 +1,6 @@
 <template>
   <!-- 查询区 -->
-  <el-form inline>
+  <el-form inline @submit.prevent> <!--在 <el-form> 里按 Enter，浏览器会默认“提交表单并刷新页面”。submit：监听表单提交 .prevent：阻止默认行为（刷新页面）-->
     <el-form-item>
       <el-input v-model="query.username" placeholder="用户名" clearable @keyup.enter="load(1)" />
     </el-form-item>
@@ -56,7 +56,7 @@
 
   <!-- 分页 -->
   <el-pagination style="margin-top: 12px" background layout="prev, pager, next" :total="total"
-    :page-size="query.pageSize" @current-change="load" />
+    :page-size="query.pageSize" @current-change="load" /> <!--Element Plus 自动把当前页码作为参数传给 load-->
 
   <!-- 新建 / 编辑弹窗 -->
   <el-dialog v-model="visible" title="用户">
@@ -82,6 +82,7 @@
   <el-dialog v-model="roleVisible" title="分配角色">
     <el-checkbox-group v-model="checkedRoleIds">
       <el-checkbox v-for="r in roleList" :key="r.roleId" :label="r.roleId">
+        <!--label：checkbox 的值（当作 value 来使用，将在 3.0.0 被废弃）-->
         {{ r.roleDisplayName }}
       </el-checkbox>
     </el-checkbox-group>
@@ -134,6 +135,9 @@
 import { ref } from 'vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import request from '@/utils/request'
+import type { PageResult } from '@/types/page'
+import type { User } from '@/types/user'
+import type { Role } from '@/types/role'
 
 /* 表格数据 */
 const list = ref<any[]>([])
@@ -149,10 +153,14 @@ const query = ref({
 /* 新建 / 编辑 */
 const visible = ref(false)
 const editingId = ref<number | null>(null)
+
+// 定义一个统一表单
 const form = ref({
   username: '',
   nickname: '',
   email: '',
+  version: 0,
+  secretToken: '',
 })
 
 /* 角色分配 */
@@ -164,7 +172,7 @@ const checkedRoleIds = ref<number[]>([])
 /* 加载用户 */
 const load = async (page = 1) => {
   query.value.pageNum = page
-  const data = await request.get('/users/page', { params: query.value })
+  const data = await request.get('/users/page', { params: query.value }) as PageResult<User>
   list.value = data.records
   total.value = data.total
 }
@@ -172,27 +180,47 @@ const load = async (page = 1) => {
 /* 新建 */
 const openCreate = () => {
   editingId.value = null
-  form.value = { username: '', nickname: '', email: '' }
+  
+  // 新建时重置
+  form.value = {
+    username: '',
+    nickname: '',
+    email: '',
+    version: 0,
+    secretToken: '',
+  }
+
   visible.value = true
 }
 
 /* 编辑 */
-const edit = (row: any) => {
+const edit = async (row: any) => {
   editingId.value = row.userId
+
+  const data = await request.get(`/users/${row.userId}`) as User
+  // 编辑时赋值
   form.value = {
-    username: row.username,
-    nickname: row.nickname,
-    email: row.email,
+    username: data.username,
+    nickname: data.nickname,
+    email: data.email,
+    version: data.version,
+    secretToken: data.secretToken,
   }
+
   visible.value = true
 }
 
 /* 提交 */
 const submit = async () => {
-  if (editingId.value) {
+  if (editingId.value) { // editingId 存在表示 修改用户
+    // 修改：全量提交
     await request.put(`/users/${editingId.value}`, form.value)
-  } else {
-    await request.post('/users', form.value)
+    ElMessage.success('修改成功')
+  } else { // editingId 不存在表示 创建用户
+    // 创建：只取需要的字段
+    const { username, nickname, email } = form.value // 解构
+    await request.post('/users', { username, nickname, email })
+    ElMessage.success('创建成功')
   }
   visible.value = false
   load()
@@ -223,13 +251,13 @@ const openRoleDialog = async (row: any) => {
   roleVisible.value = true
 
   // 查询用户已有角色
-  const userRoles = await request.get(`/users/${row.userId}/roles`)
-  checkedRoleIds.value = userRoles.map((r: any) => r.roleId)
+  const userRoles = await request.get(`/users/${row.userId}/roles`) as Role[]
+  checkedRoleIds.value = userRoles.map((r: Role) => r.roleId)
 
   // 查询所有角色（分页接口复用）
   const allRoles = await request.get('/roles/page', {
     params: { pageNum: 1, pageSize: 100 },
-  })
+  }) as PageResult<Role>
   roleList.value = allRoles.records
 }
 

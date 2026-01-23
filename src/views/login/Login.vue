@@ -14,6 +14,7 @@
 import request from '@/utils/request'
 import { useRouter } from 'vue-router'
 import { reactive } from 'vue'
+import type { LoginResult } from '@/types/auth'
 
 const router = useRouter()
 const form = reactive({
@@ -22,9 +23,12 @@ const form = reactive({
 })
 
 const login = async () => {
-  const data = await request.post('/auth/login', form)
+  const data = await request.post('/auth/login', form) as LoginResult
   localStorage.setItem('token', data.token)
-  localStorage.setItem('user', JSON.stringify(data))
+
+  // 其实已经不必要了，已经有 /me 和 Pinia 全局状态管理了。现在的架构：token → fetchMe() → Pinia → 页面
+  // localStorage.setItem('user', JSON.stringify(data))
+
   router.push('/')
 }
 </script>
