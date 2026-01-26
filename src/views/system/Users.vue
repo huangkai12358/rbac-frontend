@@ -138,6 +138,7 @@ import request from '@/utils/request'
 import type { PageResult } from '@/types/page'
 import type { User } from '@/types/user'
 import type { Role } from '@/types/role'
+import type { Me } from '@/types/me'
 
 /* 表格数据 */
 const list = ref<any[]>([])
@@ -180,7 +181,7 @@ const load = async (page = 1) => {
 /* 新建 */
 const openCreate = () => {
   editingId.value = null
-  
+
   // 新建时重置
   form.value = {
     username: '',
@@ -250,22 +251,42 @@ const openRoleDialog = async (row: any) => {
   currentUserId.value = row.userId
   roleVisible.value = true
 
-  // 查询用户已有角色
+  // 1. 查询用户已有角色（用于打勾）
   const userRoles = await request.get(`/users/${row.userId}/roles`) as Role[]
-  checkedRoleIds.value = userRoles.map((r: Role) => r.roleId)
+  const userRoleIds = userRoles.map(r => r.roleId)
 
-  // 查询所有角色（分页接口复用）
-  const allRoles = await request.get('/roles/page', {
-    params: { pageNum: 1, pageSize: 100 },
-  }) as PageResult<Role>
-  roleList.value = allRoles.records
+  // 2. 查询当前登录人信息
+  const me = await request.get('/me') as Me
+
+  // 3. 决定“角色列表来源”
+  const isSuperAdmin = me.roles.some(
+    r => r.roleName === 'SUPER_ADMIN'
+  )
+
+  if (isSuperAdmin) {
+    // 超级管理员：显示所有未禁用角色
+    const allRoles = await request.get('/roles/page', {
+      params: { pageNum: 1, pageSize: 100 }
+    }) as PageResult<Role>
+
+    roleList.value = allRoles.records
+  } else {
+    // 普通管理员：只显示我拥有的角色
+    roleList.value = me.roles
+  }
+
+  // 4. 默认勾选：用户在 roleList 里已有的角色
+  checkedRoleIds.value = roleList.value
+    .filter(r => userRoleIds.includes(r.roleId))
+    .map(r => r.roleId)
 }
 
-/* 提交角色 */
+/* 提交角色分配 */
 const submitRoles = async () => {
   await request.post(`/users/${currentUserId.value}/roles`, {
     ids: checkedRoleIds.value,
   })
+  
   roleVisible.value = false
   ElMessage.success('角色分配成功')
 }

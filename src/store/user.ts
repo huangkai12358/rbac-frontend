@@ -1,14 +1,15 @@
 import { defineStore } from 'pinia'
 import request from '@/utils/request'
 import type { Me } from '@/types/me'
+import type { Role } from '@/types/role'
 
 export const useUserStore = defineStore('user', {
   state: () => ({
     userId: 0,
     username: '',
     nickname: '',
-    roles: [] as string[],
-    permissions: [] as string[],
+    roles: [] as Role[],
+    permissions: [] as String[],
   }),
 
   actions: {

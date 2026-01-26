@@ -113,6 +113,7 @@ import type { Role } from '@/types/role'
 import { ElMessage } from 'element-plus'
 import type { PageResult } from '@/types/page'
 import type { Permission } from '@/types/permission'
+import type { Me } from '@/types/me'
 
 const list = ref<any[]>([])
 const total = ref(0)
@@ -202,29 +203,46 @@ const openPermissionDialog = async (row: any) => {
   currentRoleId.value = row.roleId
   permissionVisible.value = true
 
-  // 查询角色已有权限
+  // 1. 查询角色已有权限（用于默认打勾）
   const rolePermissions = await request.get(`/roles/${row.roleId}/permissions`) as Permission[]
-  checkedPermissionIds.value = rolePermissions.map((p: any) => p.permissionId)
+  const rolePermissionIds = rolePermissions.map(p => p.permissionId)
 
-  // 查询所有权限（分页接口复用）
-  const allPermissions = await request.get('/permissions/page', {
-    params: { pageNum: 1, pageSize: 1000 },
-  }) as PageResult<Permission>
-  permissionList.value = allPermissions.records
+  // 2. 查询当前登录人信息
+  const me = await request.get('/me') as Me
+
+  // 3. 决定“权限列表来源”
+  const isSuperAdmin = me.roles.some(
+    r => r.roleName === 'SUPER_ADMIN'
+  )
+
+  if (isSuperAdmin) {
+    // 超级管理员：显示所有未禁用权限
+    const allPermissions = await request.get('/permissions/page', {
+      params: { pageNum: 1, pageSize: 1000 }
+    }) as PageResult<Permission>
+
+    permissionList.value = allPermissions.records
+  } else {
+    // 普通管理员：只显示我拥有的权限
+    permissionList.value = me.permissions
+  }
+
+  // 4. 默认勾选：角色在 permissionList 里已有的权限
+  checkedPermissionIds.value = permissionList.value
+    .filter(p => rolePermissionIds.includes(p.permissionId))
+    .map(p => p.permissionId)
 }
 
 /* 提交权限分配 */
 const submitPermissions = async () => {
   if (!currentRoleId.value) return
 
-  await request.post(
-    `/roles/${currentRoleId.value}/permissions`,
-    {
+  await request.post(`/roles/${currentRoleId.value}/permissions`, {
       ids: checkedPermissionIds.value,
-    }
-  )
+    })
 
   permissionVisible.value = false
+  ElMessage.success('权限分配成功')
 }
 
 /* 角色详情 */
