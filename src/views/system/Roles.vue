@@ -62,12 +62,13 @@
 
   <!-- 分配权限弹窗 -->
   <el-dialog v-model="permissionVisible" title="分配权限" width="600px">
-    <el-checkbox-group v-model="checkedPermissionIds">
-      <el-checkbox v-for="p in permissionList" :key="p.permissionId" :label="p.permissionId"
-        style="width: 45%; margin-bottom: 8px">
-        {{ p.permissionDisplayName }}（{{ p.permissionName }}）
-      </el-checkbox>
-    </el-checkbox-group>
+    <el-tree ref="permissionTreeRef" :data="permissionTree" show-checkbox node-key="permissionId" default-expand-all
+      :props="{
+        label: 'permissionDisplayName',
+        children: 'children',
+        disabled: 'disabled'
+      }" />
+
 
     <template #footer>
       <el-button @click="permissionVisible = false">取消</el-button>
@@ -107,7 +108,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, nextTick } from 'vue'
 import request from '@/utils/request'
 import type { Role } from '@/types/role'
 import { ElMessage } from 'element-plus'
@@ -195,51 +196,50 @@ const toggle = async (row: any) => {
 /* 分配权限 */
 const permissionVisible = ref(false)
 const currentRoleId = ref<number | null>(null)
-const permissionList = ref<any[]>([])
-const checkedPermissionIds = ref<number[]>([])
+const permissionTree = ref<Permission[]>([])
+const permissionTreeRef = ref()
 
 /* 打开分配权限弹窗 */
 const openPermissionDialog = async (row: any) => {
   currentRoleId.value = row.roleId
   permissionVisible.value = true
 
-  // 1. 查询角色已有权限（用于默认打勾）
-  const rolePermissions = await request.get(`/roles/${row.roleId}/permissions`) as Permission[]
+  // 1. 角色已有权限
+  const rolePermissions = await request.get(
+    `/roles/${row.roleId}/permissions`
+  ) as Permission[]
   const rolePermissionIds = rolePermissions.map(p => p.permissionId)
 
-  // 2. 查询当前登录人信息
+  // 2. 当前登录人信息
   const me = await request.get('/me') as Me
+  const myPermissionIds = me.permissions.map(p => p.permissionId)
 
-  // 3. 决定“权限列表来源”
-  const isSuperAdmin = me.roles.some(
-    r => r.roleName === 'SUPER_ADMIN'
+  // 3. ❗ 不管是不是超级管理员，统一查全量权限
+  const allPermissions = await request.get('/permissions/page', {
+    params: { pageNum: 1, pageSize: 1000 }
+  }) as PageResult<Permission>
+
+  // 4. 构建权限树 + 计算 disabled
+  permissionTree.value = buildPermissionTreeWithDisabled(
+    allPermissions.records,
+    myPermissionIds
   )
 
-  if (isSuperAdmin) {
-    // 超级管理员：显示所有未禁用权限
-    const allPermissions = await request.get('/permissions/page', {
-      params: { pageNum: 1, pageSize: 1000 }
-    }) as PageResult<Permission>
-
-    permissionList.value = allPermissions.records
-  } else {
-    // 普通管理员：只显示我拥有的权限
-    permissionList.value = me.permissions
-  }
-
-  // 4. 默认勾选：角色在 permissionList 里已有的权限
-  checkedPermissionIds.value = permissionList.value
-    .filter(p => rolePermissionIds.includes(p.permissionId))
-    .map(p => p.permissionId)
+  // 5. 默认勾选角色已有权限
+  nextTick(() => {
+    permissionTreeRef.value.setCheckedKeys(rolePermissionIds)
+  })
 }
 
 /* 提交权限分配 */
 const submitPermissions = async () => {
   if (!currentRoleId.value) return
 
+  const checkedIds = permissionTreeRef.value.getCheckedKeys()
+
   await request.post(`/roles/${currentRoleId.value}/permissions`, {
-      ids: checkedPermissionIds.value,
-    })
+    ids: checkedIds,
+  })
 
   permissionVisible.value = false
   ElMessage.success('权限分配成功')
@@ -260,6 +260,39 @@ const openRoleDetail = async (row: any) => {
     `/roles/${row.roleId}/permissions`
   )
 }
+
+function buildPermissionTreeWithDisabled(
+  list: Permission[],
+  myPermissionIds: number[]
+): Permission[] {
+
+  const map = new Map<number, Permission>()
+  const roots: Permission[] = []
+
+  // 1. 初始化节点 + disabled 计算
+  list.forEach(p => {
+    map.set(p.permissionId, {
+      ...p,
+      children: [],
+      // ⭐ 我没有的权限，直接禁用
+      disabled: !myPermissionIds.includes(p.permissionId),
+    })
+  })
+
+  // 2. 组装父子关系
+  list.forEach(p => {
+    const node = map.get(p.permissionId)!
+    if (p.parentId === 0) {
+      roots.push(node)
+    } else {
+      const parent = map.get(p.parentId)
+      parent && parent.children!.push(node)
+    }
+  })
+
+  return roots
+}
+
 
 load()
 </script>

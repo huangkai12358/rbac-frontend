@@ -11,4 +11,6 @@ export interface Permission {
   path: string
   method: string
   sort: number // 默认为 0
+  children?: Permission[] // 分配权限时用
+  disabled?: boolean // 分配权限时用
 }

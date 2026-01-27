@@ -12,9 +12,17 @@ export const useUserStore = defineStore('user', {
     permissions: [] as String[],
   }),
 
+  getters: {
+    hasPermission: (state) => {
+      return (permission: string) => {
+        return state.permissions.includes(permission)
+      }
+    },
+  },
+
   actions: {
     async fetchMe() {
-      const data = await request.get('/me') as Me
+      const data = (await request.get('/me')) as Me
       this.userId = data.userId
       this.username = data.username
       this.nickname = data.nickname
