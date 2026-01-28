@@ -179,7 +179,7 @@ const submit = async () => {
   } else {
     // 创建：只取需要的字段
     const { roleName, roleDisplayName, description } = form.value // 解构
-    await request.post('/roles', form.value)
+    await request.post('/roles', { roleName, roleDisplayName, description })
     ElMessage.success('创建成功')
   }
   visible.value = false
@@ -198,6 +198,7 @@ const permissionVisible = ref(false)
 const currentRoleId = ref<number | null>(null)
 const permissionTree = ref<Permission[]>([])
 const permissionTreeRef = ref()
+const myPermissionIds = ref<number[]>([])
 
 /* 打开分配权限弹窗 */
 const openPermissionDialog = async (row: any) => {
@@ -212,9 +213,10 @@ const openPermissionDialog = async (row: any) => {
 
   // 2. 当前登录人信息
   const me = await request.get('/me') as Me
-  const myPermissionIds = me.permissions.map(p => p.permissionId)
+  myPermissionIds.value = me.permissions.map(p => p.permissionId)
 
-  // 3. ❗ 不管是不是超级管理员，统一查全量权限
+
+  // 3. 不管是不是超级管理员，统一查全量权限
   const allPermissions = await request.get('/permissions/page', {
     params: { pageNum: 1, pageSize: 1000 }
   }) as PageResult<Permission>
@@ -222,7 +224,7 @@ const openPermissionDialog = async (row: any) => {
   // 4. 构建权限树 + 计算 disabled
   permissionTree.value = buildPermissionTreeWithDisabled(
     allPermissions.records,
-    myPermissionIds
+    myPermissionIds.value
   )
 
   // 5. 默认勾选角色已有权限
@@ -235,15 +237,24 @@ const openPermissionDialog = async (row: any) => {
 const submitPermissions = async () => {
   if (!currentRoleId.value) return
 
-  const checkedIds = permissionTreeRef.value.getCheckedKeys()
+  // 1. 树中被勾选的所有权限
+  const checkedIds: number[] =
+    permissionTreeRef.value.getCheckedKeys()
 
-  await request.post(`/roles/${currentRoleId.value}/permissions`, {
-    ids: checkedIds,
-  })
+  // 2. 只保留“我拥有的权限”
+  const allowedIds = checkedIds.filter(id =>
+    myPermissionIds.value.includes(id)
+  )
+
+  await request.post(
+    `/roles/${currentRoleId.value}/permissions`,
+    { ids: allowedIds }
+  )
 
   permissionVisible.value = false
   ElMessage.success('权限分配成功')
 }
+
 
 /* 角色详情 */
 const detailVisible = ref(false)
@@ -274,7 +285,7 @@ function buildPermissionTreeWithDisabled(
     map.set(p.permissionId, {
       ...p,
       children: [],
-      // ⭐ 我没有的权限，直接禁用
+      // 我没有的权限，直接禁用
       disabled: !myPermissionIds.includes(p.permissionId),
     })
   })
