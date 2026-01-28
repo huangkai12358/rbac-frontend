@@ -6,4 +6,5 @@ export interface Role {
   status: number
   version: number
   secretToken: string
+  disabled?: boolean // 分配角色时用
 }

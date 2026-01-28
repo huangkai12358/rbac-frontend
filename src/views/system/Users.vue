@@ -81,7 +81,7 @@
   <!-- 分配角色弹窗 -->
   <el-dialog v-model="roleVisible" title="分配角色">
     <el-checkbox-group v-model="checkedRoleIds">
-      <el-checkbox v-for="r in roleList" :key="r.roleId" :label="r.roleId">
+      <el-checkbox v-for="r in roleList" :key="r.roleId" :label="r.roleId" :disabled="r.disabled">
         <!--label：checkbox 的值（当作 value 来使用，将在 3.0.0 被废弃）-->
         {{ r.roleDisplayName }}
       </el-checkbox>
@@ -164,12 +164,6 @@ const form = ref({
   secretToken: '',
 })
 
-/* 角色分配 */
-const roleVisible = ref(false)
-const currentUserId = ref<number>(0)
-const roleList = ref<any[]>([])
-const checkedRoleIds = ref<number[]>([])
-
 /* 加载用户 */
 const load = async (page = 1) => {
   query.value.pageNum = page
@@ -246,47 +240,68 @@ const resetPassword = async (row: any) => {
   ElMessage.success('密码已重置')
 }
 
+/* 角色分配 */
+const roleVisible = ref(false)
+const currentUserId = ref<number>(0)
+const roleList = ref<any[]>([])
+const checkedRoleIds = ref<number[]>([])
+const myRoleIds = ref<number[]>([])
+
+
 /* 打开角色分配 */
 const openRoleDialog = async (row: any) => {
   currentUserId.value = row.userId
   roleVisible.value = true
 
-  // 1. 查询用户已有角色（用于打勾）
-  const userRoles = await request.get(`/users/${row.userId}/roles`) as Role[]
+  // 1. 被分配用户已有角色
+  const userRoles = await request.get(
+    `/users/${row.userId}/roles`
+  ) as Role[]
   const userRoleIds = userRoles.map(r => r.roleId)
 
   // 2. 查询当前登录人信息
   const me = await request.get('/me') as Me
-
-  // 3. 决定“角色列表来源”
   const isSuperAdmin = me.roles.some(
     r => r.roleName === 'SUPER_ADMIN'
   )
 
-  if (isSuperAdmin) {
-    // 超级管理员：显示所有未禁用角色
-    const allRoles = await request.get('/roles/page', {
-      params: { pageNum: 1, pageSize: 100 }
-    }) as PageResult<Role>
+  myRoleIds.value = me.roles.map(r => r.roleId)
 
-    roleList.value = allRoles.records
-  } else {
-    // 普通管理员：只显示我拥有的角色
-    roleList.value = me.roles
-  }
+  // 3. 统一查询全部角色
+  const allRoles = await request.get('/roles/page', {
+    params: { pageNum: 1, pageSize: 1000 }
+  }) as PageResult<Role>
 
-  // 4. 默认勾选：用户在 roleList 里已有的角色
-  checkedRoleIds.value = roleList.value
-    .filter(r => userRoleIds.includes(r.roleId))
-    .map(r => r.roleId)
+  // 4. 计算 disabled（核心）
+  roleList.value = allRoles.records.map(r => {
+    // 超级管理员：全部可操作
+    if (isSuperAdmin) {
+      return { ...r, disabled: false }
+    }
+
+    // 普通管理员：我没有的角色禁用
+    return {
+      ...r,
+      disabled: !myRoleIds.value.includes(r.roleId)
+    }
+  })
+
+  // 5. 默认勾选：用户已有的角色
+  checkedRoleIds.value = userRoleIds
 }
 
 /* 提交角色分配 */
 const submitRoles = async () => {
-  await request.post(`/users/${currentUserId.value}/roles`, {
-    ids: checkedRoleIds.value,
-  })
-  
+  // 只允许提交“我拥有的角色”
+  const allowedRoleIds = checkedRoleIds.value.filter(id =>
+    myRoleIds.value.includes(id)
+  )
+
+  await request.post(
+    `/users/${currentUserId.value}/roles`,
+    { ids: allowedRoleIds }
+  )
+
   roleVisible.value = false
   ElMessage.success('角色分配成功')
 }
