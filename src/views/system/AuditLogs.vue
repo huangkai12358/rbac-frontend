@@ -43,10 +43,10 @@
 
   <!-- 表格 -->
   <el-table :data="list" border style="margin-top: 12px">
-    <el-table-column prop="logSeq" label="序号" width="80" />
-    <el-table-column prop="username" label="用户" width="120" />
+    <el-table-column prop="logSeq" label="序号" width="60" />
+    <el-table-column prop="username" label="用户" width="100" />
 
-    <el-table-column prop="permissionName" label="权限">
+    <el-table-column prop="permissionName" label="权限" width="200">
       <template #default="{ row }">
         <el-tag v-if="row.permissionName">
           {{ row.permissionName }}
@@ -55,7 +55,7 @@
       </template>
     </el-table-column>
 
-    <el-table-column prop="path" label="路径" />
+    <el-table-column prop="path" label="路径" width = "220" />
     <el-table-column prop="method" label="方法" width="90">
       <template #default="{ row }">
         <el-tag
@@ -66,9 +66,10 @@
       </template>
     </el-table-column>
 
+    <el-table-column prop="requestBody" label="请求体"  />
     <el-table-column prop="ip" label="IP" width="140" />
 
-    <el-table-column label="结果" width="90">
+    <el-table-column label="结果" width="70">
       <template #default="{ row }">
         <el-tag :type="row.success === 1 ? 'success' : 'danger'">
           {{ row.success === 1 ? '成功' : '失败' }}
@@ -76,8 +77,8 @@
       </template>
     </el-table-column>
 
-    <el-table-column prop="errorMessage" label="错误信息" />
-    <el-table-column prop="createTime" label="时间" width="180" />
+    <el-table-column prop="errorMessage" label="错误信息" width="230"/>
+    <el-table-column prop="createTime" label="时间" width="170" />
   </el-table>
 
   <!-- 分页 -->

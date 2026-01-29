@@ -4,6 +4,7 @@
   </el-button>
 
   <el-table :data="list" style="margin-top: 12px">
+    <el-table-column prop="permissionId" label="ID" width="80" />
     <el-table-column prop="permissionName" label="权限标识" />
     <el-table-column prop="permissionDisplayName" label="权限名称" />
     <el-table-column prop="type" label="类型" />

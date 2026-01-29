@@ -4,6 +4,7 @@
   </el-button>
 
   <el-table :data="list" style="margin-top: 12px">
+    <el-table-column prop="roleId" label="ID" width="80" />
     <el-table-column prop="roleName" label="角色标识" />
     <el-table-column prop="roleDisplayName" label="角色名称" />
     <el-table-column prop="description" label="描述" />
