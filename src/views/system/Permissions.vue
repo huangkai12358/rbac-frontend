@@ -1,8 +1,21 @@
 <template>
+  <!-- 查询区 -->
+  <el-form inline @submit.prevent> <!--在 <el-form> 里按 Enter，浏览器会默认“提交表单并刷新页面”。submit：监听表单提交 .prevent：阻止默认行为（刷新页面）-->
+    <el-form-item>
+      <el-input v-model="query.permissionName" placeholder="权限名" clearable @keyup.enter="load(1)" />
+    </el-form-item>
+    <el-form-item>
+      <el-button type="primary" @click="load(1)">查询</el-button>
+      <el-button @click="reset">重置</el-button>
+    </el-form-item>
+  </el-form>
+
+  <!-- 操作区 -->
   <el-button type="primary" v-permission="'PERMISSION:CREATE'" @click="openCreate">
     新建权限
   </el-button>
 
+  <!-- 表格 -->
   <el-table :data="list" style="margin-top: 12px">
     <el-table-column prop="permissionId" label="ID" width="80" />
     <el-table-column prop="permissionName" label="权限标识" />
@@ -21,33 +34,36 @@
 
     <el-table-column label="操作">
       <template #default="{ row }">
-        <el-button size="small" v-permission="'PERMISSION:UPDATE'" @click="edit(row)">
+        <el-button size="small" type="primary" v-permission="'PERMISSION:UPDATE'" @click="edit(row)">
           编辑
         </el-button>
-        <el-button size="small" v-permission="'PERMISSION:STATUS'" @click="toggle(row)">
+        <el-button size="small" type="danger" v-permission="'PERMISSION:STATUS'" @click="toggle(row)">
           {{ row.status === 1 ? '禁用' : '启用' }}
         </el-button>
       </template>
     </el-table-column>
   </el-table>
 
+  <!-- 分页 -->
   <el-pagination style="margin-top: 12px" :total="total" :page-size="query.pageSize" @current-change="load" />
 
+
+  <!-- 新建 / 编辑弹窗 -->
   <el-dialog v-model="visible" title="权限">
-    <el-form :model="form">
-      <el-form-item label="权限标识">
+    <el-form ref="formRef" :model="form" :rules="editingId ? {} : rules" label-width="100px">
+      <el-form-item label="权限标识" prop="permissionName" :required="!editingId">
         <el-input v-model="form.permissionName" />
       </el-form-item>
-      <el-form-item label="权限名称">
+      <el-form-item label="权限名称" prop="permissionDisplayName" :required="!editingId">
         <el-input v-model="form.permissionDisplayName" />
       </el-form-item>
       <el-form-item label="描述">
         <el-input v-model="form.description" />
       </el-form-item>
-      <el-form-item label="类型">
+      <el-form-item label="类型" prop="type" :required="!editingId">
         <el-input-number v-model="form.type" />
       </el-form-item>
-      <el-form-item label="父权限ID">
+      <el-form-item label="父权限ID" prop="parentId" :required="!editingId">
         <el-input-number v-model="form.parentId" />
       </el-form-item>
       <el-form-item label="路径">
@@ -56,9 +72,10 @@
       <el-form-item label="方法">
         <el-input v-model="form.method" />
       </el-form-item>
-      <el-form-item label="排序">
+      <el-form-item label="排序" prop="sort" :required="!editingId">
         <el-input-number v-model="form.sort" />
       </el-form-item>
+
     </el-form>
 
     <template #footer>
@@ -75,15 +92,20 @@ import type { PageResult } from '@/types/page'
 import type { Permission } from '@/types/permission'
 import { ElMessage } from 'element-plus'
 
+/* 表格数据 */
 const list = ref<any[]>([])
 const total = ref(0)
-const visible = ref(false)
-const editingId = ref<number | null>(null)
 
+/* 查询条件 */
 const query = ref({
   pageNum: 1,
   pageSize: 10,
+  permissionName: '',
 })
+
+/* 新建 / 编辑 */
+const visible = ref(false)
+const editingId = ref<number | null>(null)
 
 // 定义一个统一表单
 const form = ref({
@@ -99,6 +121,7 @@ const form = ref({
   secretToken: '',
 })
 
+/* 加载权限 */
 const load = async (page = 1) => {
   query.value.pageNum = page
   const data = await request.get('/permissions/page', { params: query.value }) as PageResult<Permission>
@@ -106,6 +129,17 @@ const load = async (page = 1) => {
   total.value = data.total
 }
 
+/* 重置查询 */
+const reset = () => {
+  query.value = {
+    pageNum: 1,
+    pageSize: 10,
+    permissionName: '',
+  }
+  load(1)
+}
+
+/* 新建 */
 const openCreate = () => {
   editingId.value = null
 
@@ -126,6 +160,7 @@ const openCreate = () => {
   visible.value = true
 }
 
+/* 编辑 */
 const edit = async (row: any) => {
   editingId.value = row.permissionId
 
@@ -147,7 +182,36 @@ const edit = async (row: any) => {
   visible.value = true
 }
 
+// 规则：新建权限：新建权限，权限标识、权限名称、类型、父权限ID、排序必填
+import type { FormRules, FormInstance } from 'element-plus'
+
+const formRef = ref<FormInstance>()
+
+const rules: FormRules = {
+  permissionName: [
+    { required: true, message: '请输入权限标识', trigger: 'blur' },
+  ],
+  permissionDisplayName: [
+    { required: true, message: '请输入权限名称', trigger: 'blur' },
+  ],
+  type: [
+    { required: true, message: '请选择类型', trigger: 'change' },
+  ],
+  parentId: [
+    { required: true, message: '请输入父权限ID', trigger: 'change' },
+  ],
+  sort: [
+    { required: true, message: '请输入排序值', trigger: 'change' },
+  ],
+}
+
+/* 提交 */
 const submit = async () => {
+  // 新建才校验
+  if (!editingId.value) {
+    await formRef.value?.validate()
+  }
+
   if (editingId.value) {
     // 修改：全量提交
     await request.put(`/permissions/${editingId.value}`, form.value)
@@ -175,12 +239,15 @@ const submit = async () => {
       method,
       sort,
     })
+
     ElMessage.success('创建成功')
   }
+
   visible.value = false
   load()
 }
 
+/* 启用 / 禁用 */
 const toggle = async (row: any) => {
   await request.put(`/permissions/${row.permissionId}/status`, {
     status: row.status === 1 ? 0 : 1,
@@ -188,5 +255,6 @@ const toggle = async (row: any) => {
   load()
 }
 
+/* 初始加载 */
 load()
 </script>

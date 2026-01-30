@@ -31,12 +31,19 @@ request.interceptors.response.use(
   },
   (error) => {
     // error 回调处理的是：HTTP 请求“失败（非 2xx 或网络异常）”的情况
-    if (error.response?.status === 401) {
+
+    if (error.response?.status === 401) { // 处理 401
       localStorage.clear()
       location.href = '/login'
+    } else if (error.response?.status === 400) { // 处理 400
+      const message = error.response?.data?.errorMessage || '请求参数错误'
+      ElMessage.error(message)
+    } else if (error.response?.status === 403) { // 处理 403
+      location.href = '/403'
+    } else { // 其他数字
+      ElMessage.error('网络异常，请稍后重试')
     }
-
-    ElMessage.error('网络异常，请稍后重试')
+    
     return Promise.reject(error)
   }
 )

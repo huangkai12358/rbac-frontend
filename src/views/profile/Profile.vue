@@ -30,11 +30,7 @@
 
   <el-descriptions title="角色">
     <el-descriptions-item>
-      <el-tag
-        v-for="r in me.roles"
-        :key="r.roleId"
-        style="margin-right: 6px"
-      >
+      <el-tag v-for="r in me.roles" :key="r.roleId" style="margin-right: 6px">
         {{ r.roleDisplayName }}
       </el-tag>
     </el-descriptions-item>
@@ -45,12 +41,7 @@
 
   <el-descriptions title="权限">
     <el-descriptions-item>
-      <el-tag
-        v-for="p in me.permissions"
-        :key="p.permissionId"
-        type="success"
-        style="margin: 4px"
-      >
+      <el-tag v-for="p in me.permissions" :key="p.permissionId" type="success" style="margin: 4px">
         {{ p.permissionDisplayName }}
       </el-tag>
     </el-descriptions-item>
@@ -79,25 +70,13 @@
   <el-dialog v-model="passwordVisible" title="修改密码" width="400px">
     <el-form :model="passwordForm" label-width="100px">
       <el-form-item label="原密码">
-        <el-input
-          v-model="passwordForm.oldPassword"
-          type="password"
-          show-password
-        />
+        <el-input v-model="passwordForm.oldPassword" type="password" show-password />
       </el-form-item>
       <el-form-item label="新密码">
-        <el-input
-          v-model="passwordForm.newPassword"
-          type="password"
-          show-password
-        />
+        <el-input v-model="passwordForm.newPassword" type="password" show-password />
       </el-form-item>
       <el-form-item label="确认新密码">
-        <el-input
-          v-model="confirmPassword"
-          type="password"
-          show-password
-        />
+        <el-input v-model="confirmPassword" type="password" show-password />
       </el-form-item>
     </el-form>
 

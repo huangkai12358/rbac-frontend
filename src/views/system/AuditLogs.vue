@@ -116,7 +116,7 @@ const query = ref<AuditLogQuery>({
 /* 时间区间 */
 const dateRange = ref<[string, string] | null>(null) // 明确告诉 TS：dateRange 要么 null，要么一定有两个 string。dateRange.value[0] 不再可能是 undefined
 
-/* 加载数据 */
+/* 加载审计日志 */
 const load = async (page = 1) => {
   query.value.pageNum = page
 

@@ -4,7 +4,10 @@
     <el-form-item>
       <el-input v-model="query.username" placeholder="用户名" clearable @keyup.enter="load(1)" />
     </el-form-item>
-    <el-button type="primary" @click="load(1)">查询</el-button>
+    <el-form-item>
+      <el-button type="primary" @click="load(1)">查询</el-button>
+      <el-button @click="reset">重置</el-button>
+    </el-form-item>
   </el-form>
 
   <!-- 操作区 -->
@@ -34,7 +37,7 @@
           查看详情
         </el-button>
 
-        <el-button size="small" v-permission="'USER:UPDATE'" @click="edit(row)">
+        <el-button size="small" type="primary" v-permission="'USER:UPDATE'" @click="edit(row)">
           编辑
         </el-button>
 
@@ -46,7 +49,7 @@
           {{ row.status === 1 ? '禁用' : '启用' }}
         </el-button>
 
-        <el-button size="small" v-permission="'USER:ASSIGN'" @click="openRoleDialog(row)">
+        <el-button size="small" type="success" v-permission="'USER:ASSIGN'" @click="openRoleDialog(row)">
           分配角色
         </el-button>
 
@@ -60,9 +63,9 @@
 
   <!-- 新建 / 编辑弹窗 -->
   <el-dialog v-model="visible" title="用户">
-    <el-form :model="form" label-width="80px">
-      <el-form-item label="用户名">
-        <el-input v-model="form.username" :disabled="!!editingId" />
+    <el-form :model="form" :rules="editingId ? {} : rules" label-width="80px" ref="formRef">
+      <el-form-item label="用户名" prop="username" :required="!editingId">
+        <el-input v-model="form.username" />
       </el-form-item>
       <el-form-item label="昵称">
         <el-input v-model="form.nickname" />
@@ -172,6 +175,16 @@ const load = async (page = 1) => {
   total.value = data.total
 }
 
+/* 重置查询 */
+const reset = () => {
+  query.value = {
+    pageNum: 1,
+    pageSize: 10,
+    username: '',
+  }
+  load(1)
+}
+
 /* 新建 */
 const openCreate = () => {
   editingId.value = null
@@ -205,10 +218,31 @@ const edit = async (row: any) => {
   visible.value = true
 }
 
+// 规则：新建用户：用户名必填
+import type { FormRules } from 'element-plus'
+
+const rules: FormRules = {
+  username: [
+    {
+      required: true,
+      message: '请输入用户名',
+      trigger: 'blur',
+    },
+  ],
+}
+
 /* 提交 */
+import type { FormInstance } from 'element-plus'
+
+const formRef = ref<FormInstance>()
+
 const submit = async () => {
+  // 只有新建才校验
+  if (!editingId.value) {
+    await formRef.value?.validate()
+  }
+
   if (editingId.value) { // editingId 存在表示 修改用户
-    // 修改：全量提交
     await request.put(`/users/${editingId.value}`, form.value)
     ElMessage.success('修改成功')
   } else { // editingId 不存在表示 创建用户
@@ -217,6 +251,7 @@ const submit = async () => {
     await request.post('/users', { username, nickname, email })
     ElMessage.success('创建成功')
   }
+
   visible.value = false
   load()
 }
@@ -240,7 +275,7 @@ const resetPassword = async (row: any) => {
   ElMessage.success('密码已重置')
 }
 
-/* 角色分配 */
+/* 分配角色 */
 const roleVisible = ref(false)
 const currentUserId = ref<number>(0)
 const roleList = ref<any[]>([])
@@ -248,7 +283,7 @@ const checkedRoleIds = ref<number[]>([])
 const myRoleIds = ref<number[]>([])
 
 
-/* 打开角色分配 */
+/* 打开角色分配弹窗 */
 const openRoleDialog = async (row: any) => {
   currentUserId.value = row.userId
   roleVisible.value = true
@@ -312,7 +347,7 @@ const detail = ref<any>({})
 const roles = ref<any[]>([])
 const permissions = ref<any[]>([])
 
-/* 打开详情抽屉 */
+/* 打开用户详情抽屉 */
 const openDetail = async (row: any) => {
   detailVisible.value = true
   detail.value = row
@@ -326,5 +361,6 @@ const openDetail = async (row: any) => {
   )
 }
 
+/* 初始加载 */
 load()
 </script>

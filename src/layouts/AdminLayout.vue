@@ -30,6 +30,7 @@ import { useUserStore } from '@/store/user'
 
 const store = useUserStore()
 
+// 不发请求，只是前端 logout
 const logout = () => {
   store.logout()
 }

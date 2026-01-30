@@ -1,34 +1,116 @@
 <template>
-  <el-form :model="form" class="login-form">
-    <el-form-item>
-      <el-input v-model="form.username" placeholder="用户名" />
-    </el-form-item>
-    <el-form-item>
-      <el-input v-model="form.password" type="password" placeholder="密码" />
-    </el-form-item>
-    <el-button type="primary" @click="login">登录</el-button>
-  </el-form>
+  <div class="login-container">
+    <el-card class="login-card" shadow="always">
+      <div class="title">
+        <h2>RBAC 管理系统</h2>
+        <p>欢迎登录</p>
+      </div>
+
+      <el-form :model="form" class="login-form" @keyup.enter="login">
+        <el-form-item>
+          <el-input v-model="form.username" placeholder="用户名" size="large" clearable>
+            <template #prefix>
+              <el-icon>
+                <User />
+              </el-icon>
+            </template>
+          </el-input>
+        </el-form-item>
+
+        <el-form-item>
+          <el-input v-model="form.password" type="password" placeholder="密码" size="large" show-password>
+            <template #prefix>
+              <el-icon>
+                <Lock />
+              </el-icon>
+            </template>
+          </el-input>
+        </el-form-item>
+
+        <el-form-item>
+          <el-button type="primary" size="large" class="login-btn" :loading="loading" @click="login">
+            登录
+          </el-button>
+        </el-form-item>
+      </el-form>
+
+    </el-card>
+  </div>
 </template>
 
 <script setup lang="ts">
-import request from '@/utils/request'
+import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { reactive } from 'vue'
+import request from '@/utils/request'
 import type { LoginResult } from '@/types/auth'
+import { User, Lock } from '@element-plus/icons-vue'
 
 const router = useRouter()
+
 const form = reactive({
   username: '',
   password: '',
 })
 
+/* 避免用户狂按回车或按钮 */
+const loading = ref(false)
+
+// 登录中 → 按钮转圈 + 禁用
+// 登录结束 → 按钮恢复
 const login = async () => {
-  const data = await request.post('/auth/login', form) as LoginResult
-  localStorage.setItem('token', data.token)
+  if (loading.value) return
+  loading.value = true
 
-  // 其实已经不必要了，已经有 /me 和 Pinia 全局状态管理了。现在的架构：token → fetchMe() → Pinia → 页面
-  // localStorage.setItem('user', JSON.stringify(data))
+  try {
+    const data = await request.post('/auth/login', form) as LoginResult
+    localStorage.setItem('token', data.token)
 
-  router.push('/')
+    // 其实已经不必要了，已经有 /me 和 Pinia 全局状态管理了。现在的架构：token → fetchMe() → Pinia → 页面
+    // localStorage.setItem('user', JSON.stringify(data))
+
+    router.push('/')
+  } finally {
+    loading.value = false
+  }
 }
 </script>
+
+<style scoped>
+.login-container {
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: white
+}
+
+.login-card {
+  width: 380px;
+  padding: 24px 20px;
+  border-radius: 12px;
+}
+
+.title {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.title h2 {
+  margin: 0;
+  font-weight: 600;
+}
+
+.title p {
+  margin: 6px 0 0;
+  font-size: 14px;
+  color: #888;
+}
+
+.login-form {
+  margin-top: 10px;
+}
+
+.login-btn {
+  width: 100%;
+}
+</style>

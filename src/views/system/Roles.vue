@@ -1,8 +1,21 @@
 <template>
+  <!-- 查询区 -->
+  <el-form inline @submit.prevent> <!--在 <el-form> 里按 Enter，浏览器会默认“提交表单并刷新页面”。submit：监听表单提交 .prevent：阻止默认行为（刷新页面）-->
+    <el-form-item>
+      <el-input v-model="query.roleName" placeholder="角色名" clearable @keyup.enter="load(1)" />
+    </el-form-item>
+    <el-form-item>
+      <el-button type="primary" @click="load(1)">查询</el-button>
+      <el-button @click="reset">重置</el-button>
+    </el-form-item>
+  </el-form>
+
+  <!-- 操作区 -->
   <el-button type="primary" v-permission="'ROLE:CREATE'" @click="openCreate">
     新建角色
   </el-button>
 
+  <!-- 表格 -->
   <el-table :data="list" style="margin-top: 12px">
     <el-table-column prop="roleId" label="ID" width="80" />
     <el-table-column prop="roleName" label="角色标识" />
@@ -23,15 +36,15 @@
           查看详情
         </el-button>
 
-        <el-button size="small" v-permission="'ROLE:UPDATE'" @click="edit(row)">
+        <el-button size="small" type="primary" v-permission="'ROLE:UPDATE'" @click="edit(row)">
           编辑
         </el-button>
 
-        <el-button size="small" v-permission="'ROLE:STATUS'" @click="toggle(row)">
+        <el-button size="small" type="danger" v-permission="'ROLE:STATUS'" @click="toggle(row)">
           {{ row.status === 1 ? '禁用' : '启用' }}
         </el-button>
 
-        <el-button size="small" v-permission="'ROLE:ASSIGN'" @click="openPermissionDialog(row)">
+        <el-button size="small" type="success" v-permission="'ROLE:ASSIGN'" @click="openPermissionDialog(row)">
           分配权限
         </el-button>
 
@@ -39,15 +52,16 @@
     </el-table-column>
   </el-table>
 
+  <!-- 分页 -->
   <el-pagination style="margin-top: 12px" :total="total" :page-size="query.pageSize" @current-change="load" />
 
   <!-- 新建 / 编辑弹窗 -->
   <el-dialog v-model="visible" title="角色">
-    <el-form :model="form">
-      <el-form-item label="角色标识">
+    <el-form ref="formRef" :model="form" :rules="editingId ? {} : rules" label-width="80px">
+      <el-form-item label="角色标识" prop="roleName" :required="!editingId">
         <el-input v-model="form.roleName" />
       </el-form-item>
-      <el-form-item label="角色名称">
+      <el-form-item label="角色名称" prop="roleDisplayName" :required="!editingId">
         <el-input v-model="form.roleDisplayName" />
       </el-form-item>
       <el-form-item label="描述">
@@ -100,7 +114,8 @@
 
     <el-divider />
 
-    <h4>拥有的权限</h4>
+    <!-- 权限 -->
+    <h4>权限</h4>
     <el-tag v-for="p in rolePermissions" :key="p.permissionId" type="success" style="margin: 4px">
       {{ p.permissionName }}
     </el-tag>
@@ -117,15 +132,20 @@ import type { PageResult } from '@/types/page'
 import type { Permission } from '@/types/permission'
 import type { Me } from '@/types/me'
 
+/* 表格数据 */
 const list = ref<any[]>([])
 const total = ref(0)
-const visible = ref(false)
-const editingId = ref<number | null>(null)
 
+/* 查询条件 */
 const query = ref({
   pageNum: 1,
   pageSize: 10,
+  roleName: '',
 })
+
+/* 新建 / 编辑 */
+const visible = ref(false)
+const editingId = ref<number | null>(null)
 
 // 定义一个统一表单
 const form = ref({
@@ -136,6 +156,7 @@ const form = ref({
   secretToken: '',
 })
 
+/* 加载角色 */
 const load = async (page = 1) => {
   query.value.pageNum = page
   const data = await request.get('/roles/page', { params: query.value }) as PageResult<Role>
@@ -143,6 +164,17 @@ const load = async (page = 1) => {
   total.value = data.total
 }
 
+/* 重置查询 */
+const reset = () => {
+  query.value = {
+    pageNum: 1,
+    pageSize: 10,
+    roleName: '',
+  }
+  load(1)
+}
+
+/* 新建 */
 const openCreate = () => {
   editingId.value = null
   // 新建时重置
@@ -156,6 +188,7 @@ const openCreate = () => {
   visible.value = true
 }
 
+/* 编辑 */
 const edit = async (row: any) => {
   editingId.value = row.roleId
 
@@ -172,7 +205,35 @@ const edit = async (row: any) => {
   visible.value = true
 }
 
+// 规则：新建角色：角色标识和角色名称必填
+import type { FormRules, FormInstance } from 'element-plus'
+
+const formRef = ref<FormInstance>()
+
+const rules: FormRules = {
+  roleName: [
+    {
+      required: true,
+      message: '请输入角色标识',
+      trigger: 'blur',
+    },
+  ],
+  roleDisplayName: [
+    {
+      required: true,
+      message: '请输入角色名称',
+      trigger: 'blur',
+    },
+  ],
+}
+
+/* 提交 */
 const submit = async () => {
+  // 新建才校验
+  if (!editingId.value) {
+    await formRef.value?.validate()
+  }
+
   if (editingId.value) {
     // 修改：全量提交
     await request.put(`/roles/${editingId.value}`, form.value)
@@ -180,13 +241,19 @@ const submit = async () => {
   } else {
     // 创建：只取需要的字段
     const { roleName, roleDisplayName, description } = form.value // 解构
-    await request.post('/roles', { roleName, roleDisplayName, description })
+    await request.post('/roles', {
+      roleName,
+      roleDisplayName,
+      description,
+    })
     ElMessage.success('创建成功')
   }
+
   visible.value = false
   load()
 }
 
+/* 启用 / 禁用 */
 const toggle = async (row: any) => {
   await request.put(`/roles/${row.roleId}/status`, {
     status: row.status === 1 ? 0 : 1,
@@ -201,7 +268,7 @@ const permissionTree = ref<Permission[]>([])
 const permissionTreeRef = ref()
 const myPermissionIds = ref<number[]>([])
 
-/* 打开分配权限弹窗 */
+/* 打开权限分配弹窗 */
 const openPermissionDialog = async (row: any) => {
   currentRoleId.value = row.roleId
   permissionVisible.value = true
@@ -256,7 +323,6 @@ const submitPermissions = async () => {
   ElMessage.success('权限分配成功')
 }
 
-
 /* 角色详情 */
 const detailVisible = ref(false)
 const detail = ref<any>({})
@@ -305,6 +371,6 @@ function buildPermissionTreeWithDisabled(
   return roots
 }
 
-
+/* 初始加载 */
 load()
 </script>
