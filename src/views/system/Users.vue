@@ -16,13 +16,15 @@
   </el-button>
 
   <!-- 表格 -->
-  <el-table :data="list" border>
-    <el-table-column prop="userId" label="ID" width="80" />
-    <el-table-column prop="username" label="用户名" />
+  <el-table :data="list" border @sort-change="handleSortChange">
+    <el-table-column prop="userId" label="ID" width="80" sortable="custom" />
+    <el-table-column prop="username" label="用户名" sortable="custom" />
     <el-table-column prop="nickname" label="昵称" />
-    <el-table-column prop="email" label="邮箱" />
+    <el-table-column prop="email" label="邮箱" sortable="custom" />
+    <el-table-column prop="createTime" label="创建时间" width="170" sortable="custom" />
+    <el-table-column prop="updateTime" label="修改时间" width="170" sortable="custom" />
 
-    <el-table-column label="状态">
+    <el-table-column prop="status" label="状态" width="80" sortable="custom">
       <template #default="{ row }">
         <el-tag :type="row.status === 1 ? 'success' : 'danger'">
           {{ row.status === 1 ? '启用' : '禁用' }}
@@ -58,8 +60,9 @@
   </el-table>
 
   <!-- 分页 -->
-  <el-pagination style="margin-top: 12px" background layout="prev, pager, next" :total="total"
-    :page-size="query.pageSize" @current-change="load" /> <!--Element Plus 自动把当前页码作为参数传给 load-->
+  <el-pagination style="margin-top: 12px" background :total="total" :page-size="query.pageSize"
+    @current-change="load" />
+  <!--Element Plus 自动把当前页码作为参数传给 load-->
 
   <!-- 新建 / 编辑弹窗 -->
   <el-dialog v-model="visible" title="用户">
@@ -152,7 +155,22 @@ const query = ref({
   pageNum: 1,
   pageSize: 10,
   username: '',
+  sortField: '',
+  sortOrder: '',
 })
+
+// 处理表头排序事件
+const handleSortChange = ({ prop, order }: any) => {
+  query.value.sortField = prop || ''
+  query.value.sortOrder =
+    order === 'ascending'
+      ? 'asc'
+      : order === 'descending'
+        ? 'desc'
+        : ''
+
+  load(1)
+}
 
 /* 新建 / 编辑 */
 const visible = ref(false)
@@ -181,6 +199,8 @@ const reset = () => {
     pageNum: 1,
     pageSize: 10,
     username: '',
+    sortField: '',
+    sortOrder: '',
   }
   load(1)
 }

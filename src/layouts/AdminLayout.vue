@@ -13,7 +13,7 @@
 
     <!-- 主区域 -->
     <el-container>
-      <el-header style="display:flex;justify-content:space-between">
+      <el-header style="display:flex; justify-content:space-between; padding-top: 10px;">
         <div>RBAC 管理后台</div>
         <el-button type="text" @click="logout">退出</el-button>
       </el-header>

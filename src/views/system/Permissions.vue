@@ -16,15 +16,16 @@
   </el-button>
 
   <!-- 表格 -->
-  <el-table :data="list" style="margin-top: 12px">
-    <el-table-column prop="permissionId" label="ID" width="80" />
-    <el-table-column prop="permissionName" label="权限标识" />
+  <el-table :data="list" border style="margin-top: 12px" @sort-change="handleSortChange">
+    <el-table-column prop="permissionId" label="ID" width="80" sortable="custom" />
+    <el-table-column prop="permissionName" label="权限标识" sortable="custom" />
     <el-table-column prop="permissionDisplayName" label="权限名称" />
-    <el-table-column prop="type" label="类型" />
-    <el-table-column prop="path" label="路径" />
-    <el-table-column prop="method" label="方法" />
+    <el-table-column prop="type" label="类型" width="80" sortable="custom" />
+    <el-table-column prop="path" label="路径" sortable="custom" />
+    <el-table-column prop="method" label="方法" width="80" sortable="custom" />
+    <el-table-column prop="createTime" label="创建时间" width="170" sortable="custom" />
 
-    <el-table-column label="状态">
+    <el-table-column prop="status" label="状态" width="80" sortable="custom">
       <template #default="{ row }">
         <el-tag :type="row.status === 1 ? 'success' : 'danger'">
           {{ row.status === 1 ? '启用' : '禁用' }}
@@ -32,7 +33,7 @@
       </template>
     </el-table-column>
 
-    <el-table-column label="操作">
+    <el-table-column label="操作" width="140">
       <template #default="{ row }">
         <el-button size="small" type="primary" v-permission="'PERMISSION:UPDATE'" @click="edit(row)">
           编辑
@@ -45,7 +46,7 @@
   </el-table>
 
   <!-- 分页 -->
-  <el-pagination style="margin-top: 12px" :total="total" :page-size="query.pageSize" @current-change="load" />
+  <el-pagination style="margin-top: 12px" background :total="total" :page-size="query.pageSize" @current-change="load" />
 
 
   <!-- 新建 / 编辑弹窗 -->
@@ -101,7 +102,22 @@ const query = ref({
   pageNum: 1,
   pageSize: 10,
   permissionName: '',
+  sortField: '',
+  sortOrder: '',
 })
+
+// 处理表头排序事件
+const handleSortChange = ({ prop, order }: any) => {
+  query.value.sortField = prop || ''
+  query.value.sortOrder =
+    order === 'ascending'
+      ? 'asc'
+      : order === 'descending'
+      ? 'desc'
+      : ''
+
+  load(1)
+}
 
 /* 新建 / 编辑 */
 const visible = ref(false)
@@ -135,6 +151,8 @@ const reset = () => {
     pageNum: 1,
     pageSize: 10,
     permissionName: '',
+    sortField: '',
+    sortOrder: '',
   }
   load(1)
 }
