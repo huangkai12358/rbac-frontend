@@ -1,8 +1,8 @@
 <template>
   <!-- 查询区 -->
-  <el-form :inline="true" class="query-form">
+  <el-form :inline="true" @submit.prevent>
     <el-form-item label="用户名">
-      <el-input v-model="query.username" placeholder="用户名" clearable />
+      <el-input v-model="query.username" placeholder="用户名" clearable @keyup.enter="load(1)" />
     </el-form-item>
 
     <el-form-item label="权限名">
@@ -27,12 +27,17 @@
     </el-form-item>
   </el-form>
 
-  <!-- 表格 -->
-  <el-table :data="list" border style="margin-top: 12px" @sort-change="handleSortChange">
-    <el-table-column prop="logSeq" label="序号" width="80" sortable="custom" />
-    <el-table-column prop="username" label="用户" sortable="custom" />
+  <!-- 导出数据 -->
+  <div class="toolbar">
+    <el-button type="primary" @click="exportExcel">导出数据</el-button>
+  </div>
 
-    <el-table-column prop="permissionName" label="权限" width="200" sortable="custom">
+  <!-- 表格 -->
+  <el-table :data="list" border style="margin-top: 22px" @sort-change="handleSortChange">
+    <el-table-column prop="logSeq" label="序号" width="80" sortable="custom" />
+    <el-table-column prop="username" label="用户名" sortable="custom" />
+
+    <el-table-column prop="permissionName" label="权限名" width="200" sortable="custom">
       <template #default="{ row }">
         <el-tag v-if="row.permissionName">
           {{ row.permissionName }}
@@ -51,7 +56,7 @@
     </el-table-column>
 
     <el-table-column prop="requestBody" label="请求体" />
-    <el-table-column prop="ip" label="IP" width="140" sortable="custom" />
+    <el-table-column prop="ip" label="IP 地址" width="140" sortable="custom" />
 
     <el-table-column prop="success" label="结果" width="80" sortable="custom">
       <template #default="{ row }">
@@ -62,7 +67,7 @@
     </el-table-column>
 
     <el-table-column prop="errorMessage" label="错误信息" />
-    <el-table-column prop="createTime" label="时间" width="170" sortable="custom" />
+    <el-table-column prop="createTime" label="操作时间" width="170" sortable="custom" />
   </el-table>
 
   <!-- 分页 -->
@@ -154,12 +159,34 @@ const reset = () => {
   load(1)
 }
 
+/* 导出 Excel */
+const exportExcel = async () => {
+  const res = await request.get('/audit-logs/export', {
+    params: query.value,
+    responseType: 'blob',
+  })
+
+  // res.data 才是真正的二进制内容
+  const blob = new Blob([res.data], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  })
+
+  const url = window.URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = '审计日志.xlsx'
+  a.click()
+  window.URL.revokeObjectURL(url)
+}
+
 /* 初始加载 */
 load()
 </script>
 
 <style scoped>
-.query-form {
-  margin-bottom: 12px;
+.toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin: 10px 0
 }
 </style>

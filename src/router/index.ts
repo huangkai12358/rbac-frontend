@@ -25,7 +25,7 @@ const router = createRouter({
           meta: { permission: 'PERMISSION:VIEW' },
         },
         {
-          path: 'auditlogs',
+          path: 'audit-logs',
           component: () => import('@/views/system/AuditLogs.vue'),
           meta: { permission: 'AUDIT:VIEW' },
         },

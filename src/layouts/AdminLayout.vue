@@ -7,7 +7,7 @@
         <el-menu-item v-permission="'USER:VIEW'" index="/users">用户管理</el-menu-item>
         <el-menu-item v-permission="'ROLE:VIEW'" index="/roles">角色管理</el-menu-item>
         <el-menu-item v-permission="'PERMISSION:VIEW'" index="/permissions">权限管理</el-menu-item>
-        <el-menu-item v-permission="'AUDIT:VIEW'" index="/auditlogs">审计管理</el-menu-item>
+        <el-menu-item v-permission="'AUDIT:VIEW'" index="/audit-logs">审计管理</el-menu-item>
       </el-menu>
     </el-aside>
 

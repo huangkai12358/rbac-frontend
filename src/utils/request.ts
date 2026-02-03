@@ -20,6 +20,14 @@ request.interceptors.request.use((config) => {
 request.interceptors.response.use(
   (res: AxiosResponse<Result<any>>) => {
     // res 回调处理的是：HTTP 请求“成功返回（2xx）”的情况
+
+    // 1. 如果是 blob（文件下载），直接返回整个 res
+    if (res.config.responseType === 'blob') {
+      return res
+    }
+
+    // 2. 其他情况，按原来的 Result<T> 结构处理
+
     const result = res.data
 
     if (result.code !== 0) {
@@ -43,7 +51,7 @@ request.interceptors.response.use(
     } else { // 其他数字
       ElMessage.error('网络异常，请稍后重试')
     }
-    
+
     return Promise.reject(error)
   }
 )

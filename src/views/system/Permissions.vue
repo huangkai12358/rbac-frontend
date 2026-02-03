@@ -1,6 +1,7 @@
 <template>
   <!-- 查询区 -->
-  <el-form inline @submit.prevent> <!--在 <el-form> 里按 Enter，浏览器会默认“提交表单并刷新页面”。submit：监听表单提交 .prevent：阻止默认行为（刷新页面）-->
+  <el-form :inline="true" @submit.prevent>
+    <!--在 <el-form> 里按 Enter，浏览器会默认“提交表单并刷新页面”。submit：监听表单提交 .prevent：阻止默认行为（刷新页面）-->
     <el-form-item>
       <el-input v-model="query.permissionName" placeholder="权限名" clearable @keyup.enter="load(1)" />
     </el-form-item>
@@ -11,9 +12,17 @@
   </el-form>
 
   <!-- 操作区 -->
-  <el-button type="primary" v-permission="'PERMISSION:CREATE'" @click="openCreate">
-    新建权限
-  </el-button>
+  <div class="toolbar">
+    <!-- 左侧按钮 -->
+    <el-button type="primary" style="margin: 10px 0" v-permission="'PERMISSION:CREATE'" @click="openCreate">
+      新建用户
+    </el-button>
+
+    <!-- 右侧按钮 -->
+    <el-button type="primary" @click="exportExcel">
+      导出数据
+    </el-button>
+  </div>
 
   <!-- 表格 -->
   <el-table :data="list" border style="margin-top: 12px" @sort-change="handleSortChange">
@@ -23,7 +32,6 @@
     <el-table-column prop="type" label="类型" width="80" sortable="custom" />
     <el-table-column prop="path" label="路径" sortable="custom" />
     <el-table-column prop="method" label="方法" width="80" sortable="custom" />
-    <el-table-column prop="createTime" label="创建时间" width="170" sortable="custom" />
 
     <el-table-column prop="status" label="状态" width="80" sortable="custom">
       <template #default="{ row }">
@@ -32,6 +40,8 @@
         </el-tag>
       </template>
     </el-table-column>
+
+    <el-table-column prop="createTime" label="创建时间" width="170" sortable="custom" />
 
     <el-table-column label="操作" width="140">
       <template #default="{ row }">
@@ -46,7 +56,8 @@
   </el-table>
 
   <!-- 分页 -->
-  <el-pagination style="margin-top: 12px" background :total="total" :page-size="query.pageSize" @current-change="load" />
+  <el-pagination style="margin-top: 12px" background :total="total" :page-size="query.pageSize"
+    @current-change="load" />
 
 
   <!-- 新建 / 编辑弹窗 -->
@@ -113,8 +124,8 @@ const handleSortChange = ({ prop, order }: any) => {
     order === 'ascending'
       ? 'asc'
       : order === 'descending'
-      ? 'desc'
-      : ''
+        ? 'desc'
+        : ''
 
   load(1)
 }
@@ -273,6 +284,35 @@ const toggle = async (row: any) => {
   load()
 }
 
+/* 导出 Excel */
+const exportExcel = async () => {
+  const res = await request.get('/permissions/export', {
+    params: query.value,
+    responseType: 'blob',
+  })
+
+  // res.data 才是真正的二进制内容
+  const blob = new Blob([res.data], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  })
+
+  const url = window.URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = '权限数据.xlsx'
+  a.click()
+  window.URL.revokeObjectURL(url)
+}
+
 /* 初始加载 */
 load()
 </script>
+
+<style>
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+</style>
