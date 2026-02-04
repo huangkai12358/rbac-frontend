@@ -137,7 +137,7 @@
     <!-- 权限 -->
     <h4>权限</h4>
     <el-tag v-for="p in rolePermissions" :key="p.permissionId" type="success" style="margin: 4px">
-      {{ p.permissionName }}
+      {{ p.permissionDisplayName }}
     </el-tag>
   </el-drawer>
 
@@ -323,7 +323,7 @@ const openPermissionDialog = async (row: any) => {
 
   // 3. 不管是不是超级管理员，统一查全量权限
   const allPermissions = await request.get('/permissions/page', {
-    params: { pageNum: 1, pageSize: 1000 }
+    params: { pageNum: 1, pageSize: 1000, sortField: "createTime", sortOrder: "asc" } // 其实此处已经不需要按创建时间升序排序，后面 buildPermissionTreeWithDisabled 会递归排序权限
   }) as PageResult<Permission>
 
   // 4. 构建权限树 + 计算 disabled
@@ -382,7 +382,7 @@ function buildPermissionTreeWithDisabled(
 ): Permission[] {
 
   const map = new Map<number, Permission>()
-  const roots: Permission[] = []
+  const roots: Permission[] = [] // Permission 有 children 和 disabled 属性
 
   // 1. 初始化节点 + disabled 计算
   list.forEach(p => {
@@ -404,6 +404,17 @@ function buildPermissionTreeWithDisabled(
       parent && parent.children!.push(node)
     }
   })
+
+  // 3. 递归排序（按 sort 升序）
+  const sortTree = (nodes: Permission[]) => {
+    nodes.sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0)) // sort 为空的兜底，避免 null / undefined 崩掉。
+    nodes.forEach(n => {
+      if (n.children && n.children.length > 0) {
+        sortTree(n.children)
+      }
+    })
+  }
+  sortTree(roots)
 
   return roots
 }

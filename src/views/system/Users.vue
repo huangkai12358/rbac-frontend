@@ -96,7 +96,7 @@
 
   <!-- 分配角色弹窗 -->
   <el-dialog v-model="roleVisible" title="分配角色">
-    <el-checkbox-group v-model="checkedRoleIds">
+    <el-checkbox-group v-model="checkedRoleIds" style="display: flex; flex-direction: column; gap: 8px;">
       <el-checkbox v-for="r in roleList" :key="r.roleId" :label="r.roleId" :disabled="r.disabled">
         <!--label：checkbox 的值（当作 value 来使用，将在 3.0.0 被废弃）-->
         {{ r.roleDisplayName }}
@@ -147,7 +147,7 @@
     <!-- 权限 -->
     <h4>权限</h4>
     <el-tag v-for="p in permissions" :key="p.permissionId" type="success" style="margin: 4px">
-      {{ p.permissionName }}
+      {{ p.permissionDisplayName }}
     </el-tag>
   </el-drawer>
 
@@ -340,7 +340,7 @@ const openRoleDialog = async (row: any) => {
 
   // 3. 统一查询全部角色
   const allRoles = await request.get('/roles/page', {
-    params: { pageNum: 1, pageSize: 1000 }
+    params: { pageNum: 1, pageSize: 1000, sortField: "createTime", sortOrder: "asc" }
   }) as PageResult<Role>
 
   // 4. 计算 disabled（核心）
