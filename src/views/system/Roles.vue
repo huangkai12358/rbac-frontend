@@ -29,7 +29,14 @@
     <el-table-column prop="roleId" label="ID" width="80" sortable="custom" />
     <el-table-column prop="roleName" label="角色标识" width="150" sortable="custom" />
     <el-table-column prop="roleDisplayName" label="角色名称" width="150" />
-    <el-table-column prop="description" label="描述" />
+
+    <el-table-column prop="description" label="描述">
+      <template #default="{ row }">
+        <div style="white-space: pre-line;"> <!-- 把 \n 当场换行符显示，合并多个空格 -->
+          {{ row.description }}
+        </div>
+      </template>
+    </el-table-column>
 
     <el-table-column prop="status" label="状态" width="80" sortable="custom">
       <template #default="{ row }">
@@ -431,6 +438,4 @@ load()
   justify-content: space-between;
   align-items: center;
 }
-
 </style>
-

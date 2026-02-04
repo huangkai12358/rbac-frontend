@@ -1,16 +1,20 @@
 <template>
   <!-- 查询区 -->
   <el-form :inline="true" @submit.prevent>
+    <el-form-item label="序号">
+      <el-input v-model="query.logSeq" placeholder="序号" clearable @keyup.enter="load(1)" />
+    </el-form-item>
+
     <el-form-item label="用户名">
       <el-input v-model="query.username" placeholder="用户名" clearable @keyup.enter="load(1)" />
     </el-form-item>
 
     <el-form-item label="权限名">
-      <el-input v-model="query.permissionName" placeholder="权限名" clearable />
+      <el-input v-model="query.permissionName" placeholder="权限名" clearable @keyup.enter="load(1)" />
     </el-form-item>
 
     <el-form-item label="结果">
-      <el-select v-model="query.success" placeholder="全部" clearable>
+      <el-select v-model="query.success" placeholder="全部" clearable style="width: 100px">
         <el-option label="成功" :value="1" />
         <el-option label="失败" :value="0" />
       </el-select>
@@ -55,7 +59,14 @@
       </template>
     </el-table-column>
 
-    <el-table-column prop="requestBody" label="请求体" />
+    <el-table-column prop="requestBody" label="请求体">
+      <template #default="{ row }">
+        <div style="white-space: pre-line;"> <!-- 把 \n 当场换行符显示，合并多个空格 -->
+          {{ row.requestBody }}
+        </div>
+      </template>
+    </el-table-column>
+
     <el-table-column prop="ip" label="IP 地址" width="140" sortable="custom" />
 
     <el-table-column prop="success" label="结果" width="80" sortable="custom">
@@ -90,6 +101,7 @@ const total = ref(0)
 const query = ref({
   pageNum: 1,
   pageSize: 10,
+  logSeq: null as number | null,
   username: '',
   permissionName: '',
   success: null as number | null,
@@ -147,6 +159,7 @@ const reset = () => {
   query.value = {
     pageNum: 1,
     pageSize: 10,
+    logSeq: null,
     username: '',
     permissionName: '',
     success: null,

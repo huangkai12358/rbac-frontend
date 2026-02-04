@@ -126,6 +126,12 @@
           {{ detail.status === 1 ? '启用' : '禁用' }}
         </el-tag>
       </el-descriptions-item>
+      <el-descriptions-item label="创建时间">
+        {{ detail.createTime }}
+      </el-descriptions-item>
+      <el-descriptions-item label="修改时间">
+        {{ detail.updateTime }}
+      </el-descriptions-item>
     </el-descriptions>
 
     <el-divider />
@@ -421,5 +427,4 @@ load()
   justify-content: space-between;
   align-items: center;
 }
-
 </style>
