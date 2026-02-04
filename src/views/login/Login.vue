@@ -40,12 +40,15 @@
 
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import request from '@/utils/request'
 import type { LoginResult } from '@/types/auth'
 import { User, Lock } from '@element-plus/icons-vue'
 
+const route = useRoute()
 const router = useRouter()
+
+const redirect = route.query.redirect as string | undefined
 
 const form = reactive({
   username: '',
@@ -68,7 +71,8 @@ const login = async () => {
     // 其实已经不必要了，已经有 /me 和 Pinia 全局状态管理了。现在的架构：token → fetchMe() → Pinia → 页面
     // localStorage.setItem('user', JSON.stringify(data))
 
-    router.push('/')
+    // 优先回跳原页面，否则回首页
+    router.replace(redirect || '/') // 用 replace 而不是 push，不把 /login 留在历史记录里，用户点“返回”不会回到登录页
   } finally {
     loading.value = false
   }

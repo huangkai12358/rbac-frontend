@@ -81,7 +81,12 @@ router.beforeEach(async (to) => {
   if (!token) {
     // 只有“非 404 页面”才跳 login
     if (!isNotFound) {
-      return '/login'
+      return {
+        path: '/login',
+        query: {
+          redirect: to.fullPath, // 保留查询参数
+        },
+      }
     }
     // 404 直接放行
     return true

@@ -2,19 +2,19 @@
   <!-- 查询区 -->
   <el-form :inline="true" @submit.prevent>
     <el-form-item label="序号">
-      <el-input v-model="query.logSeq" placeholder="序号" clearable @keyup.enter="load(1)" />
+      <el-input v-model="query.logSeq" placeholder="序号" clearable style="width: 80px" @keyup.enter="load(1)" />
     </el-form-item>
 
     <el-form-item label="用户名">
-      <el-input v-model="query.username" placeholder="用户名" clearable @keyup.enter="load(1)" />
+      <el-input v-model="query.username" placeholder="用户名" clearable style="width: 120px" @keyup.enter="load(1)" />
     </el-form-item>
 
     <el-form-item label="权限名">
-      <el-input v-model="query.permissionName" placeholder="权限名" clearable @keyup.enter="load(1)" />
+      <el-input v-model="query.permissionName" placeholder="权限名" clearable style="width: 150px" @keyup.enter="load(1)" />
     </el-form-item>
 
     <el-form-item label="结果">
-      <el-select v-model="query.success" placeholder="全部" clearable style="width: 100px">
+      <el-select v-model="query.success" placeholder="全部" clearable style="width: 80px">
         <el-option label="成功" :value="1" />
         <el-option label="失败" :value="0" />
       </el-select>
@@ -22,7 +22,7 @@
 
     <el-form-item label="时间">
       <el-date-picker v-model="dateRange" type="daterange" range-separator="至" start-placeholder="开始日期"
-        end-placeholder="结束日期" value-format="YYYY-MM-DD" />
+        end-placeholder="结束日期" value-format="YYYY-MM-DD" unlink-panels />
     </el-form-item>
 
     <el-form-item>
