@@ -71,7 +71,7 @@
 
   <!-- 分页 -->
   <el-pagination style="margin-top: 12px" background :total="total" :page-size="query.pageSize"
-    @current-change="load" />
+    :current-page="query.pageNum" @current-change="load" />
   <!--Element Plus 自动把当前页码作为参数传给 load-->
 
   <!-- 新建 / 编辑弹窗 -->
@@ -184,6 +184,9 @@ const handleSortChange = ({ prop, order }: any) => {
       : order === 'descending'
         ? 'desc'
         : ''
+
+  // 重置当前页
+  query.value.pageNum = 1
 
   load(1)
 }

@@ -10,7 +10,8 @@
     </el-form-item>
 
     <el-form-item label="权限名">
-      <el-input v-model="query.permissionName" placeholder="权限名" clearable style="width: 150px" @keyup.enter="load(1)" />
+      <el-input v-model="query.permissionName" placeholder="权限名" clearable style="width: 150px"
+        @keyup.enter="load(1)" />
     </el-form-item>
 
     <el-form-item label="结果">
@@ -120,6 +121,9 @@ const handleSortChange = ({ prop, order }: any) => {
       : order === 'descending'
         ? 'desc'
         : ''
+
+  // 重置当前页
+  query.value.pageNum = 1
 
   load(1)
 }
